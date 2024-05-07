@@ -1,4 +1,4 @@
-/* PptxGenJS 3.13.0-beta.0 @ 2023-05-17T03:15:58.392Z */
+/* PptxGenJS 3.13.0-beta.1 @ 2024-05-07T08:57:05.635Z */
 import JSZip from 'jszip';
 
 /******************************************************************************
@@ -3054,6 +3054,8 @@ function createExcelWorksheet(chartObject, zip) {
                                     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table1.xml"/>' +
                                     '</Relationships>\n');
                             }
+                            // dictionary of shared strings mapped to indexes
+                            var sharedStrings = {};
                             // sharedStrings.xml
                             {
                                 // A: Start XML
@@ -3069,6 +3071,7 @@ function createExcelWorksheet(chartObject, zip) {
                                     data[0].labels.forEach(function (arrLabel) { return (totCount_1 += arrLabel.filter(function (label) { return label && label !== ''; }).length); });
                                     strSharedStrings_1 += "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"".concat(totCount_1, "\" uniqueCount=\"").concat(totCount_1, "\">");
                                     strSharedStrings_1 += '<si><t/></si>';
+                                    sharedStrings[''] = 0;
                                 }
                                 else {
                                     // series names + all labels of one series + number of label groups (data.labels.length) of one series (i.e. how many times the blank string is used)
@@ -3079,21 +3082,34 @@ function createExcelWorksheet(chartObject, zip) {
                                     strSharedStrings_1 += "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"".concat(totCount, "\" uniqueCount=\"").concat(unqCount, "\">");
                                     // B: Add 'blank' for A1, B1, ..., of every label group inside data[n].labels
                                     strSharedStrings_1 += '<si><t xml:space="preserve"></t></si>';
+                                    sharedStrings[''] = 0;
                                 }
                                 // C: Add `name`/Series
                                 if (chartObject.opts._type === CHART_TYPE.BUBBLE || chartObject.opts._type === CHART_TYPE.BUBBLE3D) {
                                     data.forEach(function (objData, idx) {
-                                        if (idx === 0)
-                                            strSharedStrings_1 += '<si><t>X-Axis</t></si>';
+                                        if (idx === 0) {
+                                            var xAxisSharedString = 'X-Axis';
+                                            strSharedStrings_1 += "<si><t>".concat(xAxisSharedString, "</t></si>");
+                                        }
                                         else {
-                                            strSharedStrings_1 += "<si><t>".concat(encodeXmlEntities(objData.name || "Y-Axis".concat(idx)), "</t></si>");
-                                            strSharedStrings_1 += "<si><t>".concat(encodeXmlEntities("Size".concat(idx)), "</t></si>");
+                                            var yAxisSharedString = encodeXmlEntities(objData.name || "Y-Axis".concat(idx));
+                                            if (!sharedStrings[yAxisSharedString]) {
+                                                strSharedStrings_1 += "<si><t>".concat(yAxisSharedString, "</t></si>");
+                                                sharedStrings[yAxisSharedString] = Object.keys(yAxisSharedString).length;
+                                            }
+                                            var sizeSharedString = encodeXmlEntities("Size".concat(idx));
+                                            strSharedStrings_1 += "<si><t>".concat(sizeSharedString, "</t></si>");
+                                            sharedStrings[sizeSharedString] = Object.keys(sizeSharedString).length;
                                         }
                                     });
                                 }
                                 else {
                                     data.forEach(function (objData) {
-                                        strSharedStrings_1 += "<si><t>".concat(encodeXmlEntities((objData.name || ' ').replace('X-Axis', 'X-Values')), "</t></si>");
+                                        var sharedString = encodeXmlEntities((objData.name || ' ').replace('X-Axis', 'X-Values'));
+                                        if (!sharedStrings[sharedString]) {
+                                            strSharedStrings_1 += "<si><t>".concat(sharedString, "</t></si>");
+                                            sharedStrings[sharedString] = Object.keys(sharedStrings).length;
+                                        }
                                     });
                                 }
                                 // D: Add `labels`/Categories
@@ -3106,7 +3122,11 @@ function createExcelWorksheet(chartObject, zip) {
                                         labelsGroup
                                             .filter(function (label) { return label && label !== ''; })
                                             .forEach(function (label) {
-                                            strSharedStrings_1 += "<si><t>".concat(encodeXmlEntities(label), "</t></si>");
+                                            var sharedString = encodeXmlEntities(label);
+                                            if (!sharedStrings[sharedString]) {
+                                                strSharedStrings_1 += "<si><t>".concat(sharedString, "</t></si>");
+                                                sharedStrings[sharedString] = Object.keys(sharedStrings).length;
+                                            }
                                         });
                                     });
                                 }
@@ -3372,7 +3392,6 @@ function createExcelWorksheet(chartObject, zip) {
                                             strSheetXml_1 += "<row r=\"".concat(idx + 2, "\" spans=\"1:").concat(TOT_SER + TOT_LVL, "\">");
                                             // WIP: FIXME:
                                             // B: add a col for each label/cat
-                                            var totLabels = TOT_SER;
                                             var revLabelGroups = data[0].labels.slice().reverse();
                                             revLabelGroups.forEach(function (labelsGroup, idy) {
                                                 /**
@@ -3383,9 +3402,7 @@ function createExcelWorksheet(chartObject, zip) {
                                                  */
                                                 var colLabel = labelsGroup[idx];
                                                 if (colLabel) {
-                                                    var totGrpLbls = idy === 0 ? 1 : revLabelGroups[idy - 1].filter(function (label) { return label && label !== ''; }).length; // get unique label so we can add to get proper shared-string #
-                                                    totLabels += totGrpLbls;
-                                                    strSheetXml_1 += "<c r=\"".concat(getExcelColName(idx + 1 + idy)).concat(idx + 2, "\" t=\"s\"><v>").concat(totLabels, "</v></c>");
+                                                    strSheetXml_1 += "<c r=\"".concat(getExcelColName(idy + 1)).concat(idx + 2, "\" t=\"s\"><v>").concat(sharedStrings[colLabel], "</v></c>");
                                                 }
                                             });
                                             // WIP: FIXME:
