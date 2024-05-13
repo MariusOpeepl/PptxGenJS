@@ -1,4 +1,4 @@
-/* PptxGenJS 3.12.1 @ 2024-05-13T12:14:07.227Z */
+/* PptxGenJS 3.12.3 @ 2024-05-13T15:12:57.070Z */
 import JSZip from 'jszip';
 
 /******************************************************************************
@@ -3305,6 +3305,7 @@ function createExcelWorksheet(chartObject, zip) {
                                         strSheetXml_1 += '</row>';
                                         // B: Add data row(s) for each category
                                         data[0].labels[0].forEach(function (_cat, idx) {
+                                            var _a;
                                             strSheetXml_1 += "<row r=\"".concat(idx + 2, "\" spans=\"1:").concat(data.length + data[0].labels.length, "\">");
                                             // Leading cols are reserved for the label groups
                                             for (var idx2 = data[0].labels.length - 1; idx2 >= 0; idx2--) {
@@ -3313,7 +3314,7 @@ function createExcelWorksheet(chartObject, zip) {
                                                 strSheetXml_1 += '</c>';
                                             }
                                             for (var idy = 0; idy < data.length; idy++) {
-                                                strSheetXml_1 += "<c r=\"".concat(getExcelColName(data[0].labels.length + idy + 1)).concat(idx + 2, "\"><v>").concat(data[idy].values[idx] || '', "</v></c>");
+                                                strSheetXml_1 += "<c r=\"".concat(getExcelColName(data[0].labels.length + idy + 1)).concat(idx + 2, "\"><v>").concat((_a = data[idy].values[idx]) !== null && _a !== void 0 ? _a : '', "</v></c>");
                                             }
                                             strSheetXml_1 += '</row>';
                                         });
